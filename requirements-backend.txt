@@ -1,0 +1,11 @@
+# FastAPI Backend Dependencies (no streamlit)
+psycopg2-binary
+python-dotenv
+google-generativeai
+pandas
+tabulate
+fastapi
+uvicorn[standard]
+requests
+pydantic
+

@@ -1,0 +1,16 @@
+{
+    "important_rules": [
+      "Generate ONLY SELECT queries (no INSERT, UPDATE, DELETE, DROP, etc.)",
+      "In every query add logic to show the total of all the above values ",
+      "Use proper PostgreSQL syntax with double quotes for identifiers",
+      "Always use proper JOINs when querying related tables",
+      "Include LIMIT clause for queries that might return many rows (default LIMIT 100)",
+      "Handle NULL values appropriately with COALESCE or IS NULL checks",
+      "Use aggregate functions (COUNT, SUM, AVG, MAX, MIN) when appropriate",
+      "Use proper PostgreSQL date functions (DATE(), EXTRACT(), etc.) for date filters",
+      "Return the SQL query ONLY — no explanations, markdown, or comments",
+      "Use the business context to generate the SQL query"
+      
+    ]
+  }
+  

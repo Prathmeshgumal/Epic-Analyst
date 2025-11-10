@@ -1,0 +1,10 @@
+psycopg2-binary
+python-dotenv
+google-generativeai
+pandas
+tabulate
+fastapi
+uvicorn[standard]
+streamlit
+requests
+pydantic

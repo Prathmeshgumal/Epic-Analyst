@@ -1,0 +1,168 @@
+{   
+
+    "system_name": "EPIC CRM 2.0 - Automotive Dealership Business Context",
+    "business_overview": {
+      "description": "EPIC CRM 2.0 is a comprehensive Customer Relationship Management system designed for Toyota automotive dealerships, managing the complete customer journey from lead generation to vehicle delivery.",
+      "domain": "Automotive Dealership Operations",
+      "primary_business": "Toyota vehicle sales and service",
+      "geographic_focus": "Chennai and surrounding areas (Tamil Nadu, India)",
+      "customer_segments": ["Individual buyers", "Corporate clients", "Fleet operators"],
+      "revenue_streams": ["New vehicle sales", "Trade-in transactions", "Financing", "Insurance"]
+    },
+    
+    "role": "Product Specialist (PS)",
+    "description": "A Product Specialist (PS) is responsible for following up with customers (leads) and converting them into bookings or retail sales. Each PS is assigned leads by Customer Relationship Executives (CREs).",
+    "data_source": {
+      "table_name": "ps_followup_master",
+      "primary_key": "lead_uid",
+      "key_columns": {
+        "ps_name": "Name of the Product Specialist handling the lead",
+        "cre_name": "Name of the CRE who assigned the lead",
+        "ps_branch": "Branch where the PS works",
+        "lead_uid": "Unique identifier for each lead",
+        "customer_name": "Name of the customer (lead)",
+        "source": "Lead source (e.g., Google, Walk-in, Referral)",
+        "sub_source": "Detailed sub-source for the lead",
+        "lead_category": "Lead category or type",
+        "follow_up_date": "Next scheduled follow-up date for the PS",
+        "lead_status": "Current status of the lead after latest follow-up",
+        "first_call_date": "Date when PS made the first call to the customer",
+        "first_call_lead_status": "Lead status recorded after the first call",
+        "ps_assigned_at": "Timestamp when the lead was assigned to the PS by the CRE",
+        "final_status": "Final outcome of the lead (Pending, Booked, Won, Waiting for Approval)"
+      }
+    },
+    "business_definitions": {
+      "leads_assigned_to_ps": "Total number of rows in ps_followup_master where ps_name = given PS name",
+      "open_leads": "Leads where first_call_date exists (PS has called) AND final_status = 'Pending'",
+      "untouched_leads": "Leads where first_call_date does NOT exist (no call has been made yet)",
+      "retailed_leads": "Leads where final_status = 'Won'",
+      "booked_leads": "Leads where final_status = 'Booked'",
+      "approval_pending_leads": "Leads where final_status = 'Waiting for Approval'"
+    },
+    "date_filter_logic": {
+      "rule": "When filtering leads by date (e.g., today, this week), use the ps_assigned_at column.",
+      "example": "To find leads assigned to PS 'Fariz' today, filter rows where ps_name = 'Fariz' AND ps_assigned_at >= today’s date."
+    },
+    "additional_notes": {
+      "call_attempt_columns": "There are 10 sets of columns tracking each call attempt and remarks made by the PS.",
+      "remarks_tracking": "Each call attempt has its own date, lead_status, and remark column to track communication history."
+    },
+    "vehicle_portfolio": {
+      "premium_suvs": [
+        "Toyota Fortuner (4x2 MT/AT, 4x4 MT/AT, GR-S variants)",
+        "Toyota Fortuner Legender (4x2 AT, 4x4 AT)",
+        "Toyota Land Cruiser 300 (VX, ZX, GR-S)",
+        "Toyota Hilux (Standard, High MT/AT)"
+      ],
+      "mpvs_and_family_vehicles": [
+        "Toyota Innova Crysta (G, GX/GX+, VX, ZX)",
+        "Toyota Innova Hycross (G, GX/GX(O), VX/VX(O), ZX/ZX(O))",
+        "Toyota Rumion (S MT/AT/CNG, G MT/AT, V MT/AT)"
+      ],
+      "compact_and_urban_vehicles": [
+        "Toyota Urban Cruiser Hyryder (E, S, G, V variants)",
+        "Toyota Urban Cruiser Taisor (E, S, S+, V variants)",
+        "Toyota Glanza (E, S, G variants)"
+      ],
+      "luxury_vehicles": ["Toyota Camry (Hybrid)", "Toyota Vellfire (Executive Lounge)"]
+    },
+    "lead_management": {
+      "lead_sources": {
+        "digital_channels": ["Google (Web, Tele In, GMB Tele In)", "WhatsApp (Tele In, Bulk Message)", "CarDekho (CD B, CD G)", "CarWale (CWA, CWB, CWC, CWG, CWH, CWK)", "Meta/Facebook (Web)", "OEM (Dealer CMS, TKM)"],
+        "traditional_channels": ["Walk-in customers", "Referrals", "Tele Out (outbound calls)", "Other sources"]
+      },
+      "lead_categories": {
+        "hot": "High probability of conversion (immediate purchase intent)",
+        "warm": "Medium probability (within 1-3 months)",
+        "cold": "Low probability (6+ months or uncertain)"
+      },
+      "lead_types": ["Digital Leads", "Walk-in Leads", "Referral Leads", "Tele Out Leads"],
+      "lead_status_progression": {
+        "initial_statuses": ["New", "Contacted", "Qualified", "Proposal", "Negotiation", "Closed Won", "Closed Lost"],
+        "final_statuses": ["Pending", "Won", "Lost"]
+      }
+    },
+    "sales_team_structure": {
+      "management_level": ["Admin", "Branch Head", "Sales Manager"],
+      "sales_team_level": ["CRE Team Leader", "CRE", "CRE ICROP", "Sales Team Leader", "PS", "Team Leader"],
+      "support_level": ["Receptionist"],
+      "roles_and_responsibilities": {
+        "CRE": ["Initial lead qualification", "Customer profiling", "Model/variant assessment", "Test drive coordination", "Trade-in evaluation", "Qualification"],
+        "PS": ["Follow-up calls (F1-F7)", "Lead nurturing", "Proposal preparation", "Negotiation", "Closing assistance"],
+        "Team Leaders": ["Team performance monitoring", "Lead distribution optimization", "Analytics and reporting", "Process improvement"]
+      }
+    },
+    "sales_processes": {
+      "lead_qualification": {
+        "criteria": ["Customer details", "Profession", "Purchase timeline", "Model interest", "Budget and financing options", "Trade-in requirements", "Test drive preferences"],
+        "fields": ["Model interested", "Variant preference", "Buying plan", "Finance option", "Trade-in details", "Test drive type", "Profession and income details"]
+      },
+      "follow_up_process": {
+        "sequence": ["F1", "F2", "F3", "F4", "F5", "F6", "F7"],
+        "tracking": ["Call dates/times", "Outcomes and remarks", "Next follow-up", "Status updates", "Pending reasons"]
+      },
+      "lead_assignment_logic": {
+        "rules": ["Walk-in leads → PS team", "Digital leads → CRE team", "CRE qualified → PS follow-up", "Branch-based assignment", "Workload balancing"]
+      }
+    },
+    "customer_profiling": {
+      "professions": ["Business owners", "Salaried employees", "Professionals", "Government employees", "Self-employed", "Students", "Retired", "Housewives"],
+      "geography": ["Chennai city", "Chennai suburbs", "Tamil Nadu districts", "Other states"],
+      "purchase_behavior": ["Immediate buyers (0-1 month)", "Short-term buyers (1-3 months)", "Medium-term buyers (3-6 months)", "Long-term buyers (6+ months)"],
+      "vehicle_preferences": {
+        "model_categories": ["Premium SUVs", "Family MPVs", "Compact SUVs", "Sedans", "Pickup trucks"],
+        "variant_preferences": ["Base (E, S)", "Mid-range (G, GX)", "Top-end (VX, ZX, GR-S)"],
+        "transmission_preferences": ["MT", "AT", "AMT"],
+        "fuel_types": ["Petrol", "Diesel", "Hybrid", "CNG"]
+      }
+    },
+    "analytics_and_performance": {
+      "lead_metrics": ["Total leads", "Conversion rate", "Source performance", "Response time", "Follow-up completion rate"],
+      "sales_metrics": ["Sales volume", "Revenue per lead", "Average deal size", "Sales cycle duration", "Win/loss ratio"],
+      "team_performance_metrics": ["CRE qualification rate", "PS conversion rate", "Team leader effectiveness", "Branch performance", "Individual performance"]
+    },
+    "business_rules_and_constraints": {
+      "data_integrity": ["Mobile numbers must be unique", "Lead UIDs are system-generated", "Status transitions follow workflow", "Branch assignments mandatory", "User roles control data access"],
+      "business_logic": ["Walk-in leads auto-assigned to PS", "Digital leads start with CRE qualification", "Follow-up sequence limited to F1–F7", "Lead categories affect priority", "Trade-in details optional but tracked"],
+      "reporting_requirements": ["Daily/weekly/monthly performance reports", "Source-wise analysis", "Team performance comparison", "Conversion funnel analysis", "Revenue forecasting"]
+    },
+    "common_query_patterns": {
+      "lead_analysis": ["Lead volume by source and period", "Conversion by team", "Lead status distribution", "Geographic analysis", "Model interest"],
+      "performance_queries": ["Team metrics", "Branch comparison", "Source effectiveness", "Follow-up completion", "Revenue tracking"],
+      "operational_queries": ["Pending follow-ups", "Overdue follow-ups", "Lead distribution", "Customer communication", "Trade-in analysis"]
+    },
+    "database_schema_context": {
+      "key_tables": {
+        "lead_master": "Main lead repository with customer details, source, and status data",
+        "ps_followup_master": "Pre-sales follow-up tracking (F1-F7)",
+        "qualified_leads": "Qualified leads ready for conversion",
+        "booking_and_retail_master": "Completed sales and retail transactions",
+        "trade_in_master": "Trade-in vehicle details and valuations",
+        "users": "System users and roles",
+        "duplicate_leads": "Identified duplicate records",
+        "source_subsource_mapping": "Lead source and sub-source definitions"
+      }
+    },
+    "important_sql_generation_rules": [
+      "Generate ONLY SELECT queries (no INSERT, UPDATE, DELETE, DROP, etc.)",
+      "Use proper PostgreSQL syntax with double quotes for identifiers",
+      "Always use proper JOINs when querying related tables",
+      "Include LIMIT clause for large queries (default LIMIT 100)",
+      "Handle NULL values appropriately with COALESCE or IS NULL",
+      "Use aggregate functions (COUNT, SUM, AVG, MAX, MIN) when needed",
+      "Use PostgreSQL date functions for date filters",
+      "For 'recent' queries, use dates from the last 7–30 days",
+      "Filter properly by dates, status, and source fields",
+      "Return ONLY the raw SQL query (no explanations or formatting)"
+    ],
+    "business_specific_query_patterns": {
+      "lead_analysis": "Focus on lead_master with source, status, and date filters",
+      "performance_metrics": "Use aggregation with GROUP BY for team/user analysis",
+      "follow_up_tracking": "Query ps_followup_master for F1–F7 call sequences",
+      "conversion_analysis": "Join lead_master with qualified_leads and booking tables",
+      "source_effectiveness": "Analyze lead_master by source and sub_source",
+      "team_performance": "Filter by roles (CRE, PS, Team Leader) and branch"
+    }
+  }
+  
