@@ -1,238 +1,122 @@
-# EPIC CRM - Text to SQL System
+# EPIC CRM · Text2SQL Assistant
 
-A powerful natural language to SQL query system for EPIC CRM using Google Gemini AI, FastAPI, and Streamlit.
+AI-assisted analytics for the EPIC Automotive CRM. This project lets business users ask questions in plain English and receive the exact SQL needed to explore their data, plus instant visual answers when it is safe to execute the query.
 
-## Features
+## Why It Matters
 
-- 🤖 **Natural Language Processing**: Convert plain English questions into SQL queries
-- 🔄 **Interactive Chat**: Streamlit-based UI for easy conversation
-- 🚀 **FastAPI Backend**: RESTful API for SQL generation
-- 📊 **Real-time Execution**: Generate and execute SQL queries instantly
-- 🔍 **Schema Intelligence**: Automatic schema understanding and extraction
-- 🛡️ **Security**: Only SELECT queries allowed, preventing data modifications
+- **Bridge the gap:** Empower non-technical teammates to explore CRM insights without writing SQL.
+- **Stay safe:** The engine validates every query, allowing only read-only `SELECT` statements.
+- **Stay fast:** Streamlit provides a responsive chat interface backed by a FastAPI-powered inference layer and Gemini 2.0 models.
+- **Stay contextual:** Business rules, schema metadata, and sample rows keep the model grounded in EPIC Toyota’s domain.
 
-## Project Structure
+## Quick Start
 
-```
-text2sql/
-├── main.py                  # FastAPI backend server
-├── app.py                   # Streamlit frontend application
-├── text_to_sql_engine.py    # Core SQL generation engine
-├── schema_extractor.py      # Database schema extraction
-├── business_context.json    # Business domain knowledge
-├── rules.json              # SQL generation rules
-├── supabase_schema.json    # Extracted database schema
-├── requirements.txt        # Python dependencies
-└── README.md               # This file
-```
-
-## Installation
-
-### 1. Clone and Setup
+- **Python 3.11+**
+- **PostgreSQL (Supabase) connection** with read-only credentials
+- **Google Gemini API key** with access to `gemini-2.0-flash-exp`
 
 ```bash
+git clone <your fork or repo>
 cd text2sql
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-### 2. Install Dependencies
-
-```bash
+venv\Scripts\activate        # PowerShell (Windows)
 pip install -r requirements.txt
 ```
 
-### 3. Environment Configuration
-
-Create a `.env` file in the project root:
+Create a `.env` file in the repo root:
 
 ```env
-SUPABASE_HOST=your_supabase_host
-SUPABASE_DB=your_database_name
-SUPABASE_USER=your_username
-SUPABASE_PASSWORD=your_password
+SUPABASE_HOST=your-db.supabase.co
+SUPABASE_DB=epic_crm
+SUPABASE_USER=readonly_user
+SUPABASE_PASSWORD=super_secure_password
 SUPABASE_PORT=5432
-GEMINI_API_KEY=your_gemini_api_key
+GEMINI_API_KEY=your_google_gemini_key
 GEMINI_MODEL=gemini-2.0-flash-exp
 ```
 
-## Usage
-
-### Method 1: FastAPI Backend + Streamlit Frontend (Recommended)
-
-#### Step 1: Start the FastAPI Backend
+Start both services in separate terminals:
 
 ```bash
+# Backend (FastAPI)
 python main.py
-```
 
-Or with custom host/port:
-
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
-
-The API will be available at: `http://localhost:8000`
-- API Docs: `http://localhost:8000/docs`
-- Health Check: `http://localhost:8000/health`
-
-#### Step 2: Start the Streamlit Frontend
-
-Open a new terminal:
-
-```bash
+# Frontend (Streamlit)
 streamlit run app.py
 ```
 
-The UI will be available at: `http://localhost:8501`
+Visit `http://localhost:8501` to start chatting with the assistant. API docs live at `http://localhost:8000/docs`.
 
-### Method 2: Direct API Testing
+## Architecture at a Glance
 
-You can test the API directly using curl or any HTTP client:
+- **Streamlit UI (`app.py`)**  
+  WhatsApp-inspired chat interface, session history, quick actions, result tables.
 
-```bash
-curl -X POST "http://localhost:8000/generate-sql" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "Show me all leads from the last 7 days", "auto_execute": true}'
+- **FastAPI backend (`main.py`)**  
+  REST endpoints for health checks, SQL generation, execution, and schema inspection.
+
+- **Text-to-SQL engine (`text_to_sql_engine.py`)**  
+  Gemini prompt engineering, query validation, retrying connections, safe execution.
+
+- **Schema extractor (`schema_extractor.py`)**  
+  Builds `supabase_schema.json` with table metadata, keys, indexes, and sample rows.
+
+```text
+User → Streamlit (chat UI) → FastAPI → Gemini + Supabase
+            ↑───────────── chat history, result tables ────────────↑
 ```
 
-## API Endpoints
+## Key Features
 
-### Health Check
-```
-GET /health
-```
-Returns API and database connection status.
+- **Conversational SQL**: Gemini-driven NLU translates natural questions to SQL with business context baked in.
+- **Dual execution modes**: Auto-run trusted queries or require manual confirmation.
+- **Schema awareness**: Dynamic prompts include relevant tables, joins, and sample data pulled from Supabase.
+- **Safety rails**: Hard blocks on mutating commands, connection retries, and error surfacing.
+- **Persistent insights**: Chat sessions are tracked with friendly titles for easy recall during an analysis session.
 
-### Generate SQL
-```
-POST /generate-sql
-Body: {"query": "your question", "auto_execute": false}
-```
-Generates SQL from natural language query.
+## Repository Map
 
-### Execute SQL
-```
-POST /execute-sql
-Body: {"query": "SELECT * FROM table"}
-```
-Executes a SQL query directly.
-
-### Schema Info
-```
-GET /schema-info
-```
-Returns database schema information.
-
-## Example Queries
-
-### Lead Analysis
-- "Show me all leads from Google source"
-- "How many leads were created in the last 7 days?"
-- "Display leads with status 'Qualified'"
-
-### Performance Metrics
-- "What is the conversion rate by source?"
-- "Show me team performance this month"
-- "Which leads are pending follow-up?"
-
-### Customer Analysis
-- "List all customers interested in Fortuner"
-- "Show me trade-in details from last month"
-- "Display qualified leads by branch"
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────┐
-│         Streamlit Frontend (app.py)         │
-│  • User Interface                            │
-│  • Chat History                               │
-│  • Query Input/Output                         │
-└─────────────────┬───────────────────────────┘
-                  │ HTTP Requests
-                  ▼
-┌─────────────────────────────────────────────┐
-│      FastAPI Backend (main.py)               │
-│  • REST API Endpoints                        │
-│  • Request Validation                         │
-│  • CORS Handling                              │
-└─────────────────┬───────────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────────┐
-│    Text-to-SQL Engine (text_to_sql_engine.py) │
-│  • Gemini AI Integration                      │
-│  • SQL Generation                             │
-│  • Query Execution                            │
-└─────────────────┬───────────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────────┐
-│         PostgreSQL Database                   │
-│  • EPIC CRM Data                              │
-└─────────────────────────────────────────────┘
+```text
+app.py                   # Streamlit frontend
+main.py                  # FastAPI application entrypoint
+text_to_sql_engine.py    # Gemini-powered SQL generator and executor
+schema_extractor.py      # Supabase schema crawler
+business_context.json    # Domain facts for EPIC Toyota
+rules.json               # Guardrails the LLM must follow
+supabase_schema.json     # Generated schema snapshot
+requirements.txt         # Shared dependencies (frontend + backend)
+requirements-backend.txt # Backend-only minimal set (optional)
 ```
 
-## Features Explained
+## Backend API
 
-### Security
-- Only SELECT queries are allowed
-- Automatic validation of dangerous operations
-- API-level security checks
+- `GET /health` – engine status, schema availability, DB connectivity  
+- `GET /schema-info` – summary of discovered tables and metadata  
+- `POST /generate-sql` – payload `{ "query": "How many leads..." , "auto_execute": false }`  
+- `POST /execute-sql` – run a validated `SELECT` statement ({ "query": "SELECT ..." })
 
-### Intelligence
-- Context-aware SQL generation
-- Business rules integration
-- Schema-aware joins and filters
-- Automatic LIMIT on large queries
+When `auto_execute=true`, the backend immediately runs the generated SQL and returns `columns`, `data`, and `row_count`.
 
-### User Experience
-- Real-time chat interface
-- Query history preservation
-- Error handling and feedback
-- Quick action buttons
+## Customising the Assistant
+
+- Update `business_context.json` to teach the model new domain abbreviations or KPIs.
+- Extend `rules.json` with additional do/don't instructions or default filters.
+- Regenerate the schema snapshot by deleting `supabase_schema.json`; the backend rebuilds it on the next start.
 
 ## Troubleshooting
 
-### API Not Available
-- Ensure FastAPI server is running: `python main.py`
-- Check if port 8000 is available
-- Verify `.env` configuration
+- **API says “Engine not initialized”**: double-check `.env` credentials, ensure Supabase allows inbound traffic from your IP, then restart the backend.
+- **Gemini auth errors**: confirm the API key and model name, ensure your Google Cloud project has Gemini enabled.
+- **Frontend shows “Not Connected”**: backend may be offline; run `python main.py` and refresh Streamlit.
+- **Slow responses**: schema prompts can be large; trim seldom-used tables or sample data in `schema_extractor.py` if necessary.
 
-### Database Connection Failed
-- Verify Supabase credentials in `.env`
-- Check database host accessibility
-- Ensure schema file exists: `supabase_schema.json`
+## Contributing
 
-### Gemini API Errors
-- Verify `GEMINI_API_KEY` in `.env`
-- Check API quota and limits
-- Ensure model name is correct
-
-## Development
-
-### Adding New Features
-1. Update `text_to_sql_engine.py` for logic changes
-2. Update `main.py` for API endpoints
-3. Update `app.py` for UI changes
-
-### Testing
-```bash
-# Test API endpoints
-curl http://localhost:8000/health
-
-# Test SQL generation
-curl -X POST http://localhost:8000/generate-sql \
-  -H "Content-Type: application/json" \
-  -d '{"query": "test query"}'
-```
+1. Fork and branch (`git checkout -b feature/awesome-insight`)
+2. Keep changes focused; add/update tests or sample prompts if applicable
+3. Verify formatting and linting
+4. Open a pull request describing the change and manual test steps
 
 ## License
 
-This project is developed for EPIC CRM - Automotive Dealership Management System.
-
-## Support
-
-For issues and questions, please contact the development team.
-
+Internal project for the EPIC Automotive CRM team. Seek approval before sharing outside the organisation.
