@@ -8,6 +8,7 @@ import re
 import pandas as pd
 from typing import Dict, List, Any, Optional
 import google.generativeai as genai
+from datetime import datetime
 
 class TextToSQLEngine:
     def __init__(self, gemini_api_key: str, db_config: Dict, schema_path: str, model: str = "gemini-2.0-flash-exp"):
@@ -206,6 +207,184 @@ class TextToSQLEngine:
                 'sql': None,
                 'error': str(e)
             }
+
+    def determine_chart_type(self, user_query: str, data: List[Dict], columns: List[str]) -> Dict[str, Any]:
+        """Determine if data should be visualized and what chart type to use"""
+        try:
+            if not data or len(data) == 0:
+                return {'should_visualize': False}
+            
+            # Check if query suggests visualization
+            query_lower = user_query.lower()
+            visualization_keywords = ['chart', 'graph', 'plot', 'visualize', 'show', 'display', 'compare', 'trend', 'over time', 'distribution', 'percentage', 'ratio', 'breakdown', 'analysis']
+            should_visualize = any(keyword in query_lower for keyword in visualization_keywords)
+            
+            # Analyze data structure to determine chart type
+            numeric_columns = []
+            categorical_columns = []
+            date_columns = []
+            
+            for col in columns:
+                # Check first few rows to determine column type
+                sample_values = [str(row.get(col, '')) for row in data[:10] if col in row]
+                if not sample_values:
+                    continue
+                
+                # Try to detect numeric columns
+                try:
+                    float(sample_values[0])
+                    numeric_columns.append(col)
+                    continue
+                except:
+                    pass
+                
+                # Try to detect date columns
+                if any(char in str(sample_values[0]) for char in ['-', '/', '202', '201', 'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']):
+                    date_columns.append(col)
+                    continue
+                
+                # Otherwise categorical
+                categorical_columns.append(col)
+            
+            # Determine chart type based on data structure
+            chart_config = {'should_visualize': False, 'chart_type': None, 'x_axis': None, 'y_axis': None}
+            
+            # Auto-visualize if we have:
+            # - Explicit visualization keywords in query, OR
+            # - Multiple numeric columns (aggregations, counts, etc.), OR
+            # - Time-series data (date columns), OR
+            # - Comparative data (multiple categories with values)
+            has_numeric_data = len(numeric_columns) > 0
+            has_time_series = len(date_columns) > 0
+            has_categories = len(categorical_columns) > 0
+            has_multiple_values = len(data) >= 3
+            
+            if not should_visualize:
+                # Auto-visualize if data structure suggests it
+                should_visualize = (
+                    (has_numeric_data and has_categories and len(data) >= 2) or  # Categories with numbers
+                    (has_numeric_data and has_time_series and len(data) >= 3) or  # Time series
+                    (has_numeric_data and len(data) >= 5)  # Numeric data with enough points
+                )
+            
+            if not should_visualize:
+                return chart_config
+            
+            # Use LLM to determine best chart type
+            chart_prompt = f"""You are a data visualization expert. Analyze the following query and data structure:
+
+User Query: "{user_query}"
+
+Data Structure:
+- Total rows: {len(data)}
+- Columns: {', '.join(columns)}
+- Numeric columns: {', '.join(numeric_columns) if numeric_columns else 'None'}
+- Categorical columns: {', '.join(categorical_columns) if categorical_columns else 'None'}
+- Date columns: {', '.join(date_columns) if date_columns else 'None'}
+
+Sample data (first 3 rows):
+{json.dumps(data[:3], indent=2, default=str)}
+
+Determine if this data should be visualized and what type of chart would be most appropriate.
+Response format (JSON only):
+{{
+    "should_visualize": true/false,
+    "chart_type": "bar" | "line" | "pie" | "area" | "scatter" | null,
+    "x_axis": "column_name" | null,
+    "y_axis": "column_name" | null,
+    "explanation": "brief explanation of why this chart type"
+}}
+
+Chart types:
+- bar: For comparing categories
+- line: For trends over time
+- pie: For showing proportions/percentages (max 10 categories)
+- area: For cumulative values over time
+- scatter: For relationships between two numeric variables
+
+Return ONLY valid JSON, no other text.
+"""
+            
+            print("📊 Determining chart type...")
+            response = self.model.generate_content(chart_prompt)
+            response_text = response.text.strip()
+            
+            # Clean up response (remove markdown code blocks if present)
+            response_text = re.sub(r'^```json\s*', '', response_text, flags=re.MULTILINE)
+            response_text = re.sub(r'^```\s*', '', response_text, flags=re.MULTILINE)
+            response_text = re.sub(r'```$', '', response_text, flags=re.MULTILINE)
+            response_text = response_text.strip()
+            
+            chart_config = json.loads(response_text)
+            return chart_config
+            
+        except Exception as e:
+            print(f"⚠️ Chart determination failed: {e}")
+            return {'should_visualize': False}
+
+    def generate_natural_language_response(self, user_query: str, sql_query: str, execution_result: Dict[str, Any], chart_config: Optional[Dict[str, Any]] = None) -> str:
+        """Generate natural language explanation from query results"""
+        try:
+            row_count = execution_result.get('row_count', 0)
+            data = execution_result.get('data', [])
+            columns = execution_result.get('columns', [])
+            
+            if not execution_result['success']:
+                return f"I encountered an error while processing your query: {execution_result.get('error', 'Unknown error')}. Please try rephrasing your question."
+            
+            if row_count == 0:
+                return f"I searched for '{user_query}' but didn't find any matching results in the database. Please try adjusting your query or check if the data exists."
+            
+            # Prepare a summary of the data for the LLM
+            data_summary = ""
+            if data and len(data) > 0:
+                # Take first few rows as sample
+                sample_size = min(5, len(data))
+                sample_data = data[:sample_size]
+                
+                data_summary = f"\n\nHere's a sample of the results ({sample_size} of {row_count} total rows):\n"
+                for i, row in enumerate(sample_data, 1):
+                    data_summary += f"\nRow {i}:\n"
+                    for col, val in row.items():
+                        data_summary += f"  {col}: {val}\n"
+                
+                if len(data) > sample_size:
+                    data_summary += f"\n... and {len(data) - sample_size} more rows.\n"
+            
+            # Add chart information if applicable
+            chart_info = ""
+            if chart_config and chart_config.get('should_visualize'):
+                chart_type = chart_config.get('chart_type', 'chart')
+                chart_info = f"\n\nI've created a {chart_type} chart to help visualize this data. "
+            
+            # Create prompt for natural language response
+            explanation_prompt = f"""You are a helpful data analyst assistant. A user asked: "{user_query}"
+
+You executed a SQL query and got the following results:
+- Total rows found: {row_count}
+- Columns: {', '.join(columns)}
+
+{data_summary}
+{chart_info}
+
+Provide a natural, conversational response explaining what you found. Be helpful and concise. 
+Don't mention SQL queries or technical details. Just explain the results in plain language as if you're a helpful assistant.
+If there are specific insights or patterns in the data, mention them naturally.
+If a chart was created, briefly explain what the chart shows.
+"""
+            
+            print("🤖 Generating natural language response...")
+            response = self.model.generate_content(explanation_prompt)
+            explanation = response.text.strip()
+            
+            return explanation
+        except Exception as e:
+            # Fallback to simple explanation
+            row_count = execution_result.get('row_count', 0)
+            if row_count > 0:
+                return f"I found {row_count} result(s) matching your query. Here are the details:"
+            else:
+                return "I didn't find any results matching your query."
 
     def clean_sql_query(self, sql: str) -> str:
         """Clean and validate SQL query"""

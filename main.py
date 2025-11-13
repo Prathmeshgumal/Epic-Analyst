@@ -2,6 +2,8 @@ import os
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from schema_extractor import SupabaseSchemaExtractor
@@ -56,6 +58,8 @@ class SQLResponse(BaseModel):
     row_count: int = 0
     error: Optional[str] = None
     pending_execution: bool = False
+    natural_language: Optional[str] = None  # Natural language explanation
+    chart_config: Optional[dict] = None  # Chart configuration for visualizations
 
 class HealthResponse(BaseModel):
     status: str
@@ -118,10 +122,21 @@ async def health_check():
         "schema_loaded": schema_loaded
     }
 
-# Root endpoint
+# Serve static files from React build
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    assets_dir = os.path.join(static_dir, "assets")
+    if os.path.exists(assets_dir):
+        # Serve assets from /assets path
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+# Root endpoint - serve React app
 @app.get("/")
 async def root():
-    """Root endpoint"""
+    """Serve React frontend"""
+    index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
     return {
         "message": "Text-to-SQL API is running",
         "version": "1.0.0",
@@ -133,14 +148,32 @@ async def root():
         }
     }
 
-# Generate SQL endpoint
+# Catch-all route for React Router (must be after all API routes)
+@app.get("/{full_path:path}")
+async def serve_react_app(full_path: str):
+    """Serve React app for all non-API routes"""
+    # Don't interfere with API routes or static files
+    if full_path.startswith(("api/", "docs", "openapi.json", "static", "assets")):
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    # Allow API endpoints through (they should be handled by their own routes)
+    if full_path in ("health", "generate-sql", "execute-sql", "schema-info"):
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    raise HTTPException(status_code=404, detail="Frontend not built. Run 'npm run build' in frontend directory")
+
+# Generate SQL endpoint - Always auto-executes and returns natural language response
 @app.post("/generate-sql", response_model=SQLResponse)
 async def generate_sql(request: QueryRequest):
-    """Generate SQL query from natural language"""
+    """Generate SQL query from natural language, execute it, and return natural language response"""
     if not engine:
         raise HTTPException(status_code=503, detail="Engine not initialized")
     
     try:
+        # Generate SQL
         result = engine.generate_sql(request.query)
         
         if not result['success']:
@@ -149,25 +182,38 @@ async def generate_sql(request: QueryRequest):
                 error=result['error']
             )
         
-        if request.auto_execute:
-            # Execute the SQL
-            execution_result = engine.execute_query(result['sql'])
-            
-            return SQLResponse(
-                success=execution_result['success'],
-                sql=result['sql'],
-                data=execution_result['data'],
-                columns=execution_result.get('columns', []),
-                row_count=execution_result['row_count'],
-                error=execution_result['error'],
-                pending_execution=False
+        # Always execute the SQL
+        execution_result = engine.execute_query(result['sql'])
+        
+        # Determine if visualization is needed and get chart configuration
+        chart_config = None
+        if execution_result['success'] and execution_result.get('data'):
+            chart_config = engine.determine_chart_type(
+                request.query,
+                execution_result['data'],
+                execution_result.get('columns', [])
             )
-        else:
-            return SQLResponse(
-                success=True,
-                sql=result['sql'],
-                pending_execution=True
-            )
+        
+        # Generate natural language response (with chart info)
+        natural_language = engine.generate_natural_language_response(
+            request.query,
+            result['sql'],
+            execution_result,
+            chart_config
+        )
+        
+        # Return response with natural language explanation instead of SQL
+        return SQLResponse(
+            success=execution_result['success'],
+            sql=None,  # Don't expose SQL to frontend
+            data=execution_result['data'],
+            columns=execution_result.get('columns', []),
+            row_count=execution_result['row_count'],
+            error=execution_result['error'],
+            pending_execution=False,
+            natural_language=natural_language,  # Natural language response
+            chart_config=chart_config if chart_config and chart_config.get('should_visualize') else None  # Chart configuration
+        )
     except Exception as e:
         return SQLResponse(
             success=False,

@@ -1,0 +1,145 @@
+.message {
+  display: flex;
+  gap: 0;
+  align-items: flex-start;
+  width: 100%;
+  animation: fadeIn 0.3s ease;
+  padding: 0;
+  margin: 0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.message.user {
+  background: var(--bg-primary);
+}
+
+.message.assistant {
+  background: var(--bg-secondary);
+}
+
+.message-avatar {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex-shrink: 0;
+  margin: 1.5rem 1rem 0 1.5rem;
+  padding-top: 0.125rem;
+}
+
+.message.user .message-avatar {
+  margin: 1.5rem 1.5rem 0 1rem;
+}
+
+.user-avatar-initial,
+.bot-avatar-initial {
+  width: 30px;
+  height: 30px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  flex-shrink: 0;
+}
+
+.user-avatar-initial {
+  background: var(--accent-color);
+}
+
+.bot-avatar-initial {
+  background: #ab68ff;
+}
+
+.message-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 1.5rem 1.5rem 1.5rem 0;
+}
+
+.message.user .message-content {
+  padding: 1.5rem 0 1.5rem 1.5rem;
+}
+
+.message-text {
+  padding: 0;
+  border-radius: 0;
+  line-height: 1.75;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.message-text p {
+  margin: 0;
+  padding: 0;
+}
+
+.message-text p + p {
+  margin-top: 1rem;
+}
+
+.sql-block {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 1rem;
+  border: 1px solid var(--border-light);
+}
+
+.sql-block pre {
+  margin: 0;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.sql-block code {
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+@media (max-width: 768px) {
+  .message-avatar {
+    width: 24px;
+    height: 24px;
+    font-size: 0.875rem;
+    margin: 1rem 0.75rem 0 1rem;
+  }
+  
+  .message.user .message-avatar {
+    margin: 1rem 1rem 0 0.75rem;
+  }
+  
+  .message-content {
+    padding: 1rem 1rem 1rem 0;
+  }
+  
+  .message.user .message-content {
+    padding: 1rem 0 1rem 1rem;
+  }
+  
+  .message-text {
+    font-size: 0.9375rem;
+  }
+}
